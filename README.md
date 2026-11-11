@@ -4,7 +4,7 @@ Mods for the [Herdr](https://herdr.dev) desktop app.
 
 ## omp-icon
 
-Shows [omp](https://omp.sh/)'s icon for omp agents in the sidebar, tab pills and pane headers, where Herdr otherwise draws its generic agent glyph.
+Shows [omp](https://omp.sh/)'s icon for omp agents in the sidebar, tab pills and pane headers, where Herdr otherwise draws its generic agent glyph, and adds omp to the tab bar's + menu under "Start an agent".
 
 ```sh
 curl -fsSL https://raw.githubusercontent.com/muhammad-shameel-ks/sheys-herdr-app-mods/main/omp-icon/install.sh | sh

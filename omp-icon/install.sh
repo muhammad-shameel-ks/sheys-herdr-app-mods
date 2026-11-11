@@ -1,5 +1,5 @@
 #!/bin/sh
-# Installs omp's icon into Herdr's program table.
+# Adds omp to Herdr's program table: its icon, and a "Start an agent" + menu entry.
 # Copies omp.svg to <home>/program-icons/ and deep-merges programs.json into
 # <home>/programs.json (other entries are kept; omp's fields are overwritten).
 # Home: $HERDR_APP_HOME, else ~/.config/herdr-app. Herdr applies it live.
