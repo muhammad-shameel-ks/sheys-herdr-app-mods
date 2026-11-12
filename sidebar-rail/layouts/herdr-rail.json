@@ -35,7 +35,7 @@
           },
           "window_drag": true,
           "content": {
-            "mod": "workspace-chrome"
+            "mod": "herdr-rail-chrome"
           }
         },
         {
@@ -87,7 +87,7 @@
             "px": 69
           },
           "content": {
-            "mod": "workspace-chrome",
+            "mod": "herdr-rail-chrome",
             "props": {
               "footer": true
             }

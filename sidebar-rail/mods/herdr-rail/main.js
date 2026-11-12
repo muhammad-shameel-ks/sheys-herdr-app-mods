@@ -7,8 +7,12 @@
 // It is the `rail` child of the herdr-rail layout's `sidebar-body` stack. A
 // stack's hidden child never starts, so a second, empty copy (`props.role:
 // "sync"`, a 0px block that always shows) keeps the stack on the rail while the
-// sidebar is narrower than 160px (Herdr's rail width) and on Herdr's own lists
-// otherwise, however the width changed: either toggle, or dragging the edge.
+// sidebar is narrower than 160px (Herdr's rail width) and on the lists
+// otherwise, however the width changed.
+//
+// The sync copy also folds and unfolds the sidebar, animated: any mod asks with
+// setShared("rail.toggle", Date.now()) (the sidebar button, the rail's own
+// button) and it steps the width there.
 
 import { View, div, image, svg } from "gpui-kit";
 import { v_flex, h_flex } from "gpui-base";
@@ -35,12 +39,14 @@ function find(node, id) {
 const sidebarPx = () => find(layout(), "sidebar")?.size?.px ?? Infinity;
 const narrow = () => sidebarPx() < 160;
 
-// Back to the width the sidebar had before it folded (Herdr's toggles keep it there).
-function expand() {
-  setShared("sidebar.collapsed", false);
-  run("layout.resize", { id: "sidebar", px: shared("sidebar.width") ?? 268 });
-  run("layout.select", { stack: STACK, child: LISTS });
-}
+// Asks the sync copy to fold or unfold the sidebar.
+const TOGGLE = "rail.toggle";
+const requestToggle = () => setShared(TOGGLE, Date.now());
+const railPx = () => (window()?.platform === "macos" ? 76 : 44);
+// The fold: an ease-out over DURATION ms, a width step per frame.
+const DURATION = 220;
+const FRAME = 16;
+const easeOut = (k) => 1 - (1 - k) ** 3;
 
 // Space avatar colors, as Herdr's spaces list draws them.
 const MARK = { ansi6: "#22a99a", ansi3: "#e3814f", ansi4: "#5b8def", ansi5: "#8b7cf6", ansi2: "#3fae6a", ansi1: "#d9649a" };
@@ -58,8 +64,11 @@ export default class Rail extends View {
   init(_props, cx) {
     this.hovered = null;
     this.asked = null;
+    if (props()?.role !== "sync") return;
+    this.seen = shared(TOGGLE);
+    this.anim = null;
     // Dragging the sidebar's edge changes no data mods re-render on.
-    if (props()?.role === "sync") cx.timer.every(250, () => this.sync());
+    cx.timer.every(250, (cx) => this.watch(cx));
   }
 
   sync() {
@@ -68,6 +77,40 @@ export default class Rail extends View {
     if (active === want) return;
     this.asked = want;
     run("layout.select", { stack: STACK, child: want });
+  }
+
+  // Sync copy: follow the width, and take up a toggle someone asked for.
+  watch(cx) {
+    this.sync();
+    const asked = shared(TOGGLE);
+    if (asked === this.seen) return;
+    this.seen = asked;
+    this.toggle(cx);
+  }
+
+  // To the rail, or back to the width it had (Herdr's own toggles keep it in
+  // "sidebar.width" too). Mid-fold, it turns around from where it is.
+  toggle(cx) {
+    const open = (this.anim?.to ?? sidebarPx()) >= 160;
+    if (open && !this.anim) setShared("sidebar.width", sidebarPx());
+    setShared("sidebar.collapsed", open);
+    this.animate(cx, open ? railPx() : (shared("sidebar.width") ?? 268));
+  }
+
+  animate(cx, to) {
+    this.anim?.task.cancel();
+    const from = sidebarPx();
+    const start = Date.now();
+    const anim = { to };
+    anim.task = cx.timer.every(FRAME, () => {
+      const k = Math.min(1, (Date.now() - start) / DURATION);
+      run("layout.resize", { id: "sidebar", px: Math.round(from + (to - from) * easeOut(k)) });
+      this.sync();
+      if (k < 1) return;
+      anim.task.cancel();
+      if (this.anim === anim) this.anim = null;
+    });
+    this.anim = anim;
   }
 
   // One row: the edge pill, then the tile centered in what's left.
@@ -207,9 +250,10 @@ export default class Rail extends View {
       .child(h_flex().w(width).h(4).gap(1).rounded_full().overflow_hidden().children(present.map(segment)));
   }
 
-  render() {
+  render(cx) {
     if (props()?.role === "sync") {
       this.sync();
+      if (shared(TOGGLE) !== this.seen) cx.timer.after(0, (cx) => this.watch(cx));
       return div();
     }
     const t = theme();
@@ -248,22 +292,24 @@ export default class Rail extends View {
       .tooltip("New space")
       .on_click(() => run("space.new"));
 
-    return v_flex()
+    // A fixed-width column at the left: mid-fold the tiles hold still while the edge moves.
+    return h_flex()
       .size_full()
       .min_h(0)
       .bg(t.chrome)
-      .child(v_flex().id("rail-list").flex_1().min_h(0).pt(4).pb(10).overflow_y_scroll()
-        .child(add)
-        .children(rows)
-        .when(list.length > 0, (el) => el
-          .child(h_flex().w_full().justify_center().pt(8).child(div().w(tile * 0.6).h(1).bg(t.border)))
-          .child(this.meter(list, t, tile))
-          .children(list.map((a) => this.agent(a, t, tile, kids.get(a.address) ?? 0)))))
-      .child(h_flex().h(34).flex_none().justify_center().items_center().border_t(1).border_color(t.border)
-        .child(h_flex().id("rail-expand").size(26).rounded(6).items_center().justify_center().text_color(t.dim)
-          .hover((s) => s.bg(t.hover).text_color(t.foreground))
-          .tooltip("Expand sidebar")
-          .on_click(expand)
-          .child(svg(`${ASSET}/expand.svg`).size(14))));
+      .child(v_flex().w(railPx()).h_full().min_h(0).flex_none()
+        .child(v_flex().id("rail-list").flex_1().min_h(0).pt(4).pb(10).overflow_y_scroll()
+          .child(add)
+          .children(rows)
+          .when(list.length > 0, (el) => el
+            .child(h_flex().w_full().justify_center().pt(8).child(div().w(tile * 0.6).h(1).bg(t.border)))
+            .child(this.meter(list, t, tile))
+            .children(list.map((a) => this.agent(a, t, tile, kids.get(a.address) ?? 0)))))
+        .child(h_flex().h(34).flex_none().justify_center().items_center().border_t(1).border_color(t.border)
+          .child(h_flex().id("rail-expand").size(26).rounded(6).items_center().justify_center().text_color(t.dim)
+            .hover((s) => s.bg(t.hover).text_color(t.foreground))
+            .tooltip("Expand sidebar")
+            .on_click(requestToggle)
+            .child(svg(`${ASSET}/expand.svg`).size(14)))));
   }
 }
