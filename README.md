@@ -8,6 +8,10 @@ A `herdr-rail` layout: Herdr's main layout, except the folded sidebar is a rail 
 
 The sidebar button (and the rail's expand button) folds and unfolds it with the width sliding there in about 220ms. The brand row and footer are a copy of Herdr's `workspace-chrome` mod (Apache-2.0, `LICENSE-herdr.txt`) whose button asks for that slide; it doesn't follow Herdr's updates to the original.
 
+In the expanded Spaces list, the folder-plus button makes a named group. Drag a space onto a group's header to move it in, or right-click the space and pick a group; worktrees move with their checkout. Click a header to fold the group, drag it between spaces or groups to reorder the sidebar, right-click it to rename or delete it, and "Remove from group" puts a space back above the groups. Groups live in shared state (`space.groups`); the folded rail stays a flat list, so a folded group never hides a space that needs you. The list is a copy of Herdr's `spaces` mod (Apache-2.0, `LICENSE-herdr.txt`), so it doesn't follow Herdr's updates to the original.
+
+The tab bar opens the `+` menu from the empty middle of the bar: middle-click or right-click anywhere between tabs. Drag a pane by its title and hover a tab in the tab bar: the tab lights up and dropping there moves the pane into it. The outlines follow the live window size, zoom and sidebar width. Moving or swapping panes inside a tab is Herdr's own grip, not this mod. The move uses park and keep so the terminal survives. The tab bar and pane header are copies of Herdr's `tabs` and `pane` mods, so they don't follow Herdr's updates to the originals.
+
 ```sh
 curl -fsSL https://raw.githubusercontent.com/muhammad-shameel-ks/sheys-herdr-app-mods/main/sidebar-rail/install.sh | sh
 ```

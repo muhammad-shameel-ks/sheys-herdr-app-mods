@@ -55,7 +55,7 @@
                   },
                   "min": 90,
                   "content": {
-                    "mod": "spaces"
+                    "mod": "herdr-rail-spaces"
                   }
                 },
                 {
@@ -121,7 +121,7 @@
           },
           "window_drag": true,
           "content": {
-            "mod": "tabs"
+            "mod": "herdr-rail-tabs"
           }
         },
         {
@@ -150,7 +150,7 @@
                   },
                   "header": {
                     "content": {
-                      "mod": "pane"
+                      "mod": "herdr-rail-pane"
                     },
                     "height": 30,
                     "position": "top",

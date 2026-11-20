@@ -11,7 +11,7 @@ set -eu
 
 base=https://raw.githubusercontent.com/muhammad-shameel-ks/sheys-herdr-app-mods/main/sidebar-rail
 home=${HERDR_APP_HOME:-$HOME/.config/herdr-app}
-files="mods/herdr-rail/main.js mods/herdr-rail/mod.json mods/herdr-rail-chrome/main.js mods/herdr-rail-chrome/mod.json mods/herdr-rail/plus.svg mods/herdr-rail/expand.svg layouts/herdr-rail.json layouts/herdr-rail.svg"
+files="mods/herdr-rail/main.js mods/herdr-rail/mod.json mods/herdr-rail-chrome/main.js mods/herdr-rail-chrome/mod.json mods/herdr-rail/plus.svg mods/herdr-rail/expand.svg mods/herdr-rail-spaces/main.js mods/herdr-rail-spaces/mod.json mods/herdr-rail-tabs/main.js mods/herdr-rail-tabs/mod.json mods/herdr-rail-pane/main.js mods/herdr-rail-pane/mod.json mods/herdr-rail-drag/main.js mods/herdr-rail-drag/geometry.js mods/herdr-rail-drag/mod.json layouts/herdr-rail.json layouts/herdr-rail.svg"
 
 [ -d "$home" ] || { echo "install.sh: no Herdr app home at $home" >&2; exit 1; }
 
@@ -35,7 +35,7 @@ for f in $files; do
 done
 
 if command -v herdr-app >/dev/null 2>&1; then
-  for m in herdr-rail herdr-rail-chrome; do
+  for m in herdr-rail herdr-rail-chrome herdr-rail-spaces herdr-rail-tabs herdr-rail-pane herdr-rail-drag; do
     herdr-app check "$home/mods/$m"
   done
   herdr-app do layout.switch --name herdr-rail >/dev/null 2>&1 \
