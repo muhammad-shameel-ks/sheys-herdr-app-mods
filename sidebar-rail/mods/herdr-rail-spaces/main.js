@@ -5,12 +5,13 @@
 // Everything else is Herdr's spaces mod (cloned from 0.1.16): stable colored
 // avatars, worktrees under their checkout, grouped by machine when more than
 // one is known. After a space's name, the repo its first terminal is in now,
-// only where unusual: branch, ahead/behind. Agent state lives in the agents
-// list, not here. Click to switch, right-click for its menu, drag to reorder.
+// only where unusual: branch, ahead/behind; then its agents as a stack of
+// round program icons, the most urgent first, with one dot for the most urgent
+// status. Click to switch, right-click for its menu, drag to reorder.
 
-import { View, div, svg } from "gpui-kit";
+import { View, div, image, svg } from "gpui-kit";
 import { v_flex, h_flex, Input, InputState, ScrollHandle } from "gpui-base";
-import { spaces, machines, panes, run, openOverlay, closeOverlay, props, exec, hc, theme, shared, setShared, watchFolder, window, layout, keys } from "herdr";
+import { spaces, agents, machines, panes, run, openOverlay, closeOverlay, props, exec, hc, theme, shared, setShared, watchFolder, window, layout, keys } from "herdr";
 
 function find(node, id) {
   if (node?.id === id) return node;
@@ -71,6 +72,12 @@ export function tone(t, status) {
 // the list, its menus and the prompt all see the same answer.
 const GROUPS_KEY = "space.groups";
 const RANK = { blocked: 4, done: 3, working: 2, idle: 1 };
+const WORD = { blocked: "needs you", done: "done", working: "working", idle: "idle" };
+// A row's agent stack: round icons overlapping by AVATAR - AVATAR_STEP, at most
+// AVATARS of them, then a "+N" chip for the rest.
+const AVATAR = 22;
+const AVATAR_STEP = 14;
+const AVATARS = 3;
 
 function readGroups() {
   const raw = shared(GROUPS_KEY);
@@ -958,8 +965,44 @@ export default class Spaces extends View {
           .when(Boolean(tree), el => el.pl(22).child(svg("mods/workspace-chrome/branch.svg").size(13).flex_none().text_color(t.dim)))
           .when(!tree, el => el.child(h_flex().size(18).flex_none().rounded(5).bg(fill).items_center().justify_center().text_size(10.5).font_bold().text_color("#ffffff").child([...w.name][0]?.toUpperCase() ?? "?")))
           .child(div().flex_initial().min_w(SIDE_MIN).truncate().text_color(t.foreground).child(w.name))
+          .when(Boolean(this.crew?.get(w.id)), el => el.child(this.agentStack(w.id, this.crew.get(w.id), on, t)))
           .child(g ? this.gitTail(g, tree, w.name, t) : div().flex_1()),
       );
+  }
+
+  // A space's agents, overlapping left to right (later on top); the ring is the
+  // row's own background so each icon reads as cut out of the one under it.
+  agentStack(id, list, on, t) {
+    const ring = on ? t.selected : t.chrome;
+    const shown = list.slice(0, list.length > AVATARS + 1 ? AVATARS : AVATARS + 1);
+    const rest = list.length - shown.length;
+    const slots = shown.length + (rest > 0 ? 1 : 0);
+    const at = (el, n) => el.absolute().top(0).left(n * AVATAR_STEP).size(AVATAR).rounded_full().border_2().border_color(ring);
+    const avatar = (a, n) => {
+      const p = a.program ?? {};
+      // 14: smaller, Herdr's built-in glyphs (omp's) don't draw.
+      const g = 14;
+      const glyph = p.icon
+        ? (p.tint ? svg(p.icon).size(g).flex_none().text_color(p.color ?? t.foreground) : image(p.icon).w(g).h(g).flex_none())
+        : div().text_size(9).font_bold().text_color(p.color ?? t.foreground).child([...(p.name || "?")][0].toUpperCase());
+      return at(h_flex(), n).items_center().justify_center().bg(p.tile ?? t.raised).child(glyph);
+    };
+    const top = list[0].status;
+    const dot = top === "idle" ? null : t[top];
+    const tip = list.map((a) => `${a.program?.name ?? "agent"} ${WORD[a.status] ?? a.status}`).join(" · ");
+    return div()
+      .id(`space-agents-${id}`)
+      .relative()
+      .flex_none()
+      .w(AVATAR + (slots - 1) * AVATAR_STEP)
+      .h(AVATAR)
+      .tooltip(tip)
+      .children(shown.map(avatar))
+      .when(rest > 0, (el) => el.child(at(h_flex(), shown.length).items_center().justify_center().bg(t.raised)
+        .text_size(8.5).font_semibold().text_color(t.muted).child(`+${rest}`)))
+      .when(Boolean(dot), (el) => el.child(div().absolute().right(-2).bottom(-2).size(8).rounded_full().border_2().border_color(ring).bg(dot)
+        .when(top === "working", (d) => d.loop("opacity", { from: 0.35, to: 1, period: 2600 }))
+        .when(top === "blocked", (d) => d.loop("opacity", { from: 0.35, to: 1, period: 1100 }))));
   }
 
   compact({ w, i }, t) {
@@ -1156,6 +1199,14 @@ export default class Spaces extends View {
       if (pruned) writeGroups(state);
     }
     this.groupState = state;
+    // Each space's agents, most urgent first, then most recently changed.
+    this.crew = new Map();
+    for (const a of agents()) {
+      const list = this.crew.get(a.space) ?? [];
+      list.push(a);
+      this.crew.set(a.space, list);
+    }
+    for (const list of this.crew.values()) list.sort((x, y) => (RANK[y.status] ?? 0) - (RANK[x.status] ?? 0) || y.seq - x.seq);
     const list = this.grouped(t, collapsed);
     // Bring the active space into view when it, or its place in the list, changes; a row already in view stays put.
     const active = sp.find(p => p.active)?.id;
