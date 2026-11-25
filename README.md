@@ -2,6 +2,18 @@
 
 Mods for the [Herdr](https://herdr.dev) desktop app.
 
+## omp-icon
+
+Shows [omp](https://omp.sh/)'s colored icon for omp agents in the sidebar, tab pills and pane headers (overriding Herdr's monochrome built-in glyph), and ensures omp is in the tab bar's + menu under "Start an agent".
+
+```sh
+curl -fsSL https://raw.githubusercontent.com/muhammad-shameel-ks/sheys-herdr-app-mods/main/omp-icon/install.sh | sh
+```
+
+It copies `omp.svg` to `~/.config/herdr-app/program-icons/` and merges an `omp` entry into `~/.config/herdr-app/programs.json`, keeping your other entries. Herdr applies it live. Needs `jq` and `curl`; `HERDR_APP_HOME` selects another Herdr home.
+
+From a checkout: `./omp-icon/install.sh`.
+
 ## sidebar-rail
 
 A `herdr-rail` layout: Herdr's main layout, except the folded sidebar is a rail of tiles instead of numbers. Spaces show as their colored avatars (hover for name, branch and `⌃N` shortcut; right-click for the space menu), agents as their program's icon. A working agent's tile glows and breathes in the working color, one that needs you breathes faster in red with a `!` badge, and one that finished unseen stays lit with a dot. A pill on the left edge marks the shown space and focused agent, and a bar over the agents splits them by status.
